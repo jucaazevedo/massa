@@ -115,148 +115,10 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
             campo_7 := to_char(sysdate-1,'YYYY') || lpad(to_char(sysdate-1,'MM'),2,'0') || lpad(to_char(sysdate-1,'DD'),2,'0');
             campo_16 := to_char(sysdate-1,'YYYY');
 
-            --------------Codigo Bandeira (ok)
-            --------------VALIDACAO LOGICA: Deve existir na Base de Adquirentes.
-            select substr(nvl(lpad(COD_BANDEIRA_TE05,3,'0'),l_cod_bandeira),1,3)
-            into campo_19
-            from TBL_INPUT_MASSA_DADOS
-            where NRO_IDENTIF_GERA_MASSA = p_numero_geracao_massa
-            and nro_linha_arquivo = p_nro_linha_arquivo;      
+            l_retorno:= campo_1||campo_2||campo_3||campo_4||campo_5||campo_6||campo_7||campo_8||
+                        campo_9||campo_10||campo_11||campo_12||campo_13||campo_14||campo_15||campo_16||campo_17;
 
-            -------------Validar Banco Emissor
-            -------------busca um banco emissor valido para a bandeira apresentada
-            BEGIN
-                SELECT CD_EMSR
-                into l_banco_emissor
-                FROM CLC.TBCLCW_EMSR_RPLC 
-                WHERE CD_BNDR = campo_19
-                and rownum < 2;  
-            EXCEPTION
-                     WHEN OTHERS THEN
-                          l_banco_emissor:='00000';
-            END;
-
-            -------------Validar MCC
-            -------------busca um MCC valido para a bandeira apresentada
-
-            BEGIN
-                SELECT CD_MCC_BNDR
-                into l_nro_mcc_ponto_venda
-                FROM CPR.TBCPRR_MCC_BNDR 
-                WHERE CD_BNDR = campo_19 
-                AND IN_RGST_ATVO='S' 
-                AND ROWNUM = 1;
-            EXCEPTION
-                     when OTHERS then
-                          l_nro_mcc_ponto_venda := '0000';
-            END;
-
-            SELECT substr(a.tipo_layout, 3, 2),
-                   nvl(rpad(a.nro_cartao_te05,19,' '),'XXXXXXXXXXXXXXXXXXX') ,
-                   nvl(lpad(a.vld_venda_te05,12,'0'),'000000000837'),
-                   lpad(nvl(a.cod_adquirente_te05, l_cod_adquir),8,'0'),
-                   lpad(nvl(a.cod_banco_emissor_te05, l_banco_emissor),5,'0'),
-                   lpad(nvl(a.nro_mcc_ponto_venda_te05, l_nro_mcc_ponto_venda),4,'0'),
-                   nvl(a.nro_referencia, '0'),
-                   tipo_layout
-            INTO campo_1,
-                 campo_3,
-                 campo_11, 
-                 campo_8,
-                 campo_17, 
-                 campo_16,
-                 campo_7,
-                 l_tipo_layout
-            FROM tbl_input_massa_dados a
-            WHERE a.nro_identif_gera_massa = p_numero_geracao_massa
-            AND a.nro_linha_arquivo = p_nro_linha_arquivo;
-
-            if translate(rtrim(ltrim( campo_11 )),' +-0123456789.', ' ') is not null then
-               valor_soma := '0';
-            else
-               valor_soma := campo_11;
-            end if;
-
-            if l_tipo_layout = 'TE05' then
-                l_valor_total_venda_debito := l_valor_total_venda_debito + to_number(valor_soma);
-                l_qtde_total_transacoes_debito := l_qtde_total_transacoes_debito + 1;
-            end if;
-            if l_tipo_layout = 'TE25' then
-                l_valor_total_venda_credito := l_valor_total_venda_credito + to_number(valor_soma);
-                l_qtde_total_trans_credito := l_qtde_total_trans_credito + 1;
-            end if;
-            
-
-            -- Se o usuário não definir o NroCartao. Definimos um cartao a partir da bandeira e l_cod_tipo_plataforma 
-            if (campo_3 = 'XXXXXXXXXXXXXXXXXXX') then
-              begin 
-                  SELECT to_char(NU_BIN)
-                  into l_nro_bin
-                  FROM CLC.TBCLCW_BIN_RPLC  
-                  WHERE --NU_BIN = substr(campo_3,1,6)
-                     CD_BNDR = campo_19
-                     AND CD_TIPO_PLTF_PGMN = l_cod_tipo_plataforma
-                     AND IN_TOKN = 'N'
-                     and rownum < 2; 
-
-                  if (length(rtrim(ltrim(l_nro_bin))) <> 6) then
-                      campo_3 := '9999999999999999   ';
-                  else
-                      campo_3 := rpad(rtrim(ltrim(l_nro_bin)) || '77' || '7777' || '7777',19,' ');
-                  end if;
-
-               exception
-                        WHEN NO_DATA_FOUND THEN
-                             campo_3 := '8888888888888888   ';
-               end;
-            elsif (campo_3 <> 'XXXXXXXXXXXXXXXXXXX') then
-              begin 
-                  SELECT to_char(NU_BIN),max(IN_TOKN) max_in_tokn,min(IN_TOKN) min_in_tokn
-                  into l_nro_bin, l_max_in_tokn, l_min_in_tokn
-                  FROM CLC.TBCLCW_BIN_RPLC  
-                  WHERE --NU_BIN = substr(campo_3,1,6)
-                     CD_BNDR = campo_19
-                     AND CD_TIPO_PLTF_PGMN = l_cod_tipo_plataforma
-                     AND nu_bin = substr(campo_3,1,6)
-                  group by to_char(NU_BIN);
-                     
-                  if (l_max_in_tokn ='S' or l_min_in_tokn = 'S') then
-                     -- BIN é tokenizer
-                     -- procurar na tabela de DE_PARA campos novos a serem descriptografaods
-                     null;
---                     select *
---                     from CLC.TBCLCR_CRSA_CRTO_FSCO_DNMC x
---                     where x.
-                  end if;
-               exception
-                        WHEN NO_DATA_FOUND THEN
-                             campo_3 := '8888888888888888   ';
-               end;
-            end if;
-            
-            if (campo_7 = '0') then
-                -- Gerar Nro de Referencia Valido a partir do NroCartao 
-                l_data_movimento := to_date(campo_27,'YYYYMMDD');
-                l_data_juliana_movimento := (TO_NUMBER(to_char(l_data_movimento,'Y'))) * 1000 
-                                         + TO_NUMBER(TO_CHAR(l_data_movimento,'DDD'));            
-                                         
-                campo_7 := case when (l_tipo_layout = 'TE06' or l_tipo_layout = 'TE26') then '7' else '2' end || 
-                           substr(campo_3,1,6) ||
-                           to_char(l_data_juliana_movimento) ||
-                           to_char(to_number(rpad(p_numero_geracao_massa,11,'0')) + p_nro_linha_arquivo) ||
-                           '1'; --digito verificador
-            end if;
-            l_nro_referencia := campo_7;
-            
-
-            l_retorno:= lpad(campo_1 || campo_2 || campo_3 || campo_4 || campo_5 || 
-                      campo_6 || campo_7 || campo_8 || campo_9 || campo_10 || 
-                      campo_11 || campo_12 || campo_13 || campo_14 || campo_15 ||
-                      campo_16 || campo_17 || campo_18 || campo_19 || campo_20 ||
-                      campo_21 || campo_22 || campo_23 || campo_24 || campo_25 ||
-                      campo_26 || campo_27,168,' ');
-                      
-            update tbl_input_massa_dados a
+/*            update tbl_input_massa_dados a
             set cod_adquirente_te05 = nvl(cod_adquirente_te05,campo_8),
                 cod_banco_emissor_te05 = nvl(cod_banco_emissor_te05,campo_17),
                 nro_cartao_te05 = nvl(nro_cartao_te05,campo_3),
@@ -265,7 +127,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
                 nro_mcc_ponto_venda_te05 = nvl(nro_mcc_ponto_venda_te05,campo_16),
                 nro_referencia = campo_7
             where nro_identif_gera_massa = p_numero_geracao_massa
-                        and nro_linha_arquivo = p_nro_linha_arquivo;
+                        and nro_linha_arquivo = p_nro_linha_arquivo; */
        EXCEPTION
                 when others then
                 null;
@@ -432,9 +294,9 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
                           l_cod_tipo_plataforma := 'C';
             end;
 
-            l_retorno:= lpad(campo_1 || campo_2 || campo_3 || campo_4 || campo_5 || 
-                      campo_6 || campo_7 || campo_8 || campo_9 || campo_10 || 
-                      campo_11 || campo_12 || campo_13 || campo_14 || campo_15,168,' ') ;
+            l_retorno:= lpad(campo_1 || campo_2 || campo_3 || campo_4 || campo_5 || campo_6 || 
+                             campo_7 || campo_8 || campo_9 || campo_10 || campo_11 || campo_12 || 
+                             campo_13 || campo_14 || campo_15,168,' ') ;
 
 
             update TBL_INPUT_MASSA_DADOS a
