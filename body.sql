@@ -188,11 +188,11 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
 
             LAYOUT_SUBTIPO_00_TE1020 (p_numero_geracao_massa number,
                                p_nro_linha_arquivo number,
-                               l_retorno out varchar2);
+                               l_retorno varchar2);
 
             LAYOUT_SUBTIPO_02_TE1020 (p_numero_geracao_massa number,
                                p_nro_linha_arquivo number,
-                               l_retorno out varchar2 );
+                               l_retorno varchar2 );
 
             commit;
        exception
