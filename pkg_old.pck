@@ -1,5 +1,11 @@
-CREATE OR REPLACE PACKAGE PKG_GERA_MASSA_10_20 AS
-       --v1 (04/07/2017)
+CREATE OR REPLACE PACKAGE PKG_GERA_MASSA AS
+       --v11 (19/06/2017)
+       --v10 (16/06/2017)
+       --v9 (07/06/2017)
+       --v8 (06/06/2017)
+       --v7 (06/06/2017)
+       --V6 (05/06/2017)
+       --v5 (02/06/2017)
 
        l_cod_bandeira varchar2(50);
        l_cod_adquir varchar2(50); /* tb chamado de codigo credenciadora*/
@@ -13,12 +19,13 @@ CREATE OR REPLACE PACKAGE PKG_GERA_MASSA_10_20 AS
        l_qtde_total_trans_credito number:=0;
        l_nro_referencia varchar2(20);
 
+
        /*
        Pendencias:
        TE0500 - gerar nro transacao
        TE0501 - validar se é CPF ou CNPJ e dar um exemplo
        */
-       PROCEDURE INPUT_DADOS_10_20 ( 
+       PROCEDURE INPUT_DADOS ( 
                  p_credenciadora_emissor varchar2, 
                  p_numero_geracao_massa in out varchar2,
                  p_numero_linha_arquivo varchar2,   
@@ -29,22 +36,22 @@ CREATE OR REPLACE PACKAGE PKG_GERA_MASSA_10_20 AS
                  p_numero_remessa_b0 varchar2,
                  p_numero_remessa_bz varchar2,
                  p_tipo_layout varchar2,
-                 p_cod_adquirente_te05 varchar2,
-                 p_banco_emissor varchar2,
-                 p_numero_cartao varchar2,
-                 p_vlr_venda varchar2,
+                 p_cod_adquirente_te05 varchar2, --6.8 b11
+                 p_banco_emissor varchar2, --6.8 b12
+                 p_numero_cartao varchar2, --6.8 b13
+                 p_vlr_venda varchar2, --6.8 b09
                  p_cod_bandeira_te05 varchar2,
-                 p_mcc_pv varchar2,
+                 p_mcc_pv varchar2, --6.8 b14
                  p_nro_referencia varchar2,
-                 p_cnpj_cpf varchar2,
-                 p_ponto_de_venda varchar2,
-                 p_tipo_pessoa varchar2,
-                 p_vlr_transacao varchar2,
-                 p_qtd_parcelas_transacao varchar2,
-                 p_codigo_produto varchar2,
+                 p_cnpj_cpf varchar2, -- 6.8 b01
+                 p_ponto_de_venda varchar2, --6.8 b02
+                 p_tipo_pessoa varchar2, --6.8 b03
+                 p_vlr_transacao varchar2, --6.8 b07
+                 p_qtd_parcelas_transacao varchar2, --6.8 b08
+                 p_codigo_produto varchar2, --6.8 b06
                  p_vl_taxa_embarque varchar2,
                  p_nro_parcela varchar2,
-                 p_quantidade_dias_liq_trs varchar2,
+                 p_quantidade_dias_liq_trs varchar2, --6.8 b04
                  p_tipo_operacao varchar2 --6.8 b20
                  );
 
@@ -106,9 +113,9 @@ CREATE OR REPLACE PACKAGE PKG_GERA_MASSA_10_20 AS
 
 END PKG_GERA_MASSA;
 /
-CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
+CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA AS
        
-       PROCEDURE INPUT_DADOS_10_20 ( 
+       PROCEDURE INPUT_DADOS ( 
                  p_credenciadora_emissor varchar2, 
                  p_numero_geracao_massa in out varchar2,
                  p_numero_linha_arquivo varchar2,   
@@ -160,6 +167,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
                 COD_ADQUIRENTE_TE05, COD_BANCO_EMISSOR_TE05,
                 NRO_CARTAO_TE05, NRO_MCC_PONTO_VENDA_TE05, COD_BANDEIRA_TE05,
                 DSC_TIPO_OPERACAO_TE05, NRO_REFERENCIA, VL_TAXA_EMBARQUE, NRO_PARCELA
+
             )
             values 
             (
