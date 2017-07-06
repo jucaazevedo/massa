@@ -14,9 +14,11 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
                  p_cod_origem varchar2,
                  p_cod_motivo_transacao varchar2,
                  p_nro_cartao varchar2,
+                 p_nro_referencia varchar2,
                  p_vl_destino varchar2,
                  p_vl_origem varchar2,
                  p_dsc_mensagem_texto varchar2,
+                 p_qtd_parcelas_transacao varchar2, 
                  p_qtd_dias_liq_tran varchar2,
                  p_dta_processamento varchar2,
                  p_cod_token_pan varchar2
@@ -31,7 +33,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
                l_numero_geracao_massa := to_number(p_numero_geracao_massa);
             END IF;
 
-            INSERT into TBL_INPUT_MASSA_DADOS_10_20
+            insert into tbl_input_massa_dados_10_20
             (
                 NRO_IDENTIF_GERA_MASSA, 
                 NRO_LINHA_ARQUIVO, 
@@ -52,7 +54,6 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
                 NRO_REMESSA_BZ, 
                 COD_TIPO_PLATAFORMA, 
                 NRO_PARCELA, 
-                VL_TAXA_EMBARQUE, 
                 NRO_REFERENCIA, 
                 TIPO_LAYOUT
             )
@@ -67,20 +68,19 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
                 p_cod_destino,
                 p_cod_origem,
                 p_cod_motivo_transacao,
-                p_numero_cartao,  
+                p_nro_cartao,  
                 p_vl_destino,
                 p_vl_origem,
                 p_dsc_mensagem_texto,
-                p_quantidade_dias_liq_trs,
+                p_qtd_dias_liq_tran,
                 p_dta_processamento,
                 p_cod_token_pan,
                 p_numero_remessa_bz,  
                 p_cod_tipo_plataforma,
                 p_qtd_parcelas_transacao, 
-                p_vl_taxa_embarque,
                 p_nro_referencia, 
                 p_tipo_layout
-            ) ;
+            );
 
             p_numero_geracao_massa := to_char(l_numero_geracao_massa);
 
@@ -111,23 +111,46 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
                  campo_16 char(4) := lpad('0',4,'0'); --Data de processamento (uso futuro) (163)
                  campo_17 char(2) := rpad(' ',2,' '); --Uso futuro
 
+                 l_cod_transacao := '';
+
        BEGIN
             campo_7 := to_char(sysdate-1,'YYYY') || lpad(to_char(sysdate-1,'MM'),2,'0') || lpad(to_char(sysdate-1,'DD'),2,'0');
             campo_16 := to_char(sysdate-1,'YYYY');
 
+            select substr(tipo_layout,3,2),
+                   lpad(nvl(cod_destino,campo_3),4,'0'),
+                   lpad(nvl(cod_origem,campo_4),4,'0'),
+                   lpad(nvl(cod_motivo_transacao,campo_5),4,'0'),
+                   rpad(nvl(nro_cartao,campo_8),19,' '),
+                   lpad(nvl(vl_destino,campo_9),12,'0'),
+                   lpad(nvl(vl_origem,campo_11),12,'0'),
+                   rpad(nvl(dsc_mensagem_texto,campo_13),70,' '),
+            into campo_1,
+                 campo_3,
+                 campo_4,
+                 campo_5,
+                 campo_8,
+                 campo_9,
+                 campo_11,
+                 campo_13,
+            from TBL_INPUT_MASSA_DADOS_10_20
+            where NRO_IDENTIF_GERA_MASSA = p_numero_geracao_massa 
+            and nro_linha_arquivo = p_nro_linha_arquivo;
+
             l_retorno:= campo_1||campo_2||campo_3||campo_4||campo_5||campo_6||campo_7||campo_8||
                         campo_9||campo_10||campo_11||campo_12||campo_13||campo_14||campo_15||campo_16||campo_17;
 
-/*            update tbl_input_massa_dados a
-            set cod_adquirente_te05 = nvl(cod_adquirente_te05,campo_8),
-                cod_banco_emissor_te05 = nvl(cod_banco_emissor_te05,campo_17),
-                nro_cartao_te05 = nvl(nro_cartao_te05,campo_3),
-                vld_venda_te05 = nvl(vld_venda_te05,campo_11),
-                cod_bandeira_te05 = nvl(cod_bandeira_te05,campo_19),
-                nro_mcc_ponto_venda_te05 = nvl(nro_mcc_ponto_venda_te05,campo_16),
-                nro_referencia = campo_7
+            update tbl_input_massa_dados_10_20 a
+            set tipo_layout = l_cod_transacao,
+                cod_destino = campo_3,
+                cod_origem = campo_4,
+                cod_motivo_transacao = campo_5,
+                nro_cartao = campo_8,
+                vl_destino = campo_9,
+                vl_origem = campo_11,
+                dsc_mensagem_texto = campo_13
             where nro_identif_gera_massa = p_numero_geracao_massa
-                        and nro_linha_arquivo = p_nro_linha_arquivo; */
+                        and nro_linha_arquivo = p_nro_linha_arquivo; 
        EXCEPTION
                 when others then
                 null;
@@ -137,9 +160,9 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
                                       p_nro_linha_arquivo number,
                                       l_retorno out varchar2)IS
                  campo_1 char(2) := lpad('0',2,'0'); --Código da Transação (1)
-                 campo_2 char(2) := lpad('0',2,'0'); --Subcódigo da Transação  (3)
+                 campo_2 char(2) := '02'; --Subcódigo da Transação  (3)
                  campo_18 char(12) := rpad(' ',12,' '); --Uso futuro (5)
-                 campo_19 char(3) := rpad(' ',3,' '); --Código do país (17)
+                 campo_19 char(3) := 'BRA'; --Código do país (17)
                  campo_20 char(3) := rpad(' ',3,' '); --Uso futuro (20)
                  campo_21 char(3) := lpad('0',3,'0'); --Quantidade de dias para liquidação financeira (23)
                  campo_22 char(8) := lpad('0',8,'0'); --Data de processamento (26)
@@ -148,7 +171,23 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
                  campo_5 char(113) := rpad(' ',113,' '); --Uso futuro (56)
 
        BEGIN
-                 l_retorno := campo_1||campo_2||campo_18||campo_19||campo_20||campo_21||campo_22||campo_23||campo_24||campo_5;
+            select substr(tipo_layout,3,2),
+                   lpad(nvl(qtd_dias_liq_tran,campo_21),3,'0'),
+                   rpad(nvl(cod_token_pan,campo_24),19,' ')
+            into campo_1,
+                 campo_21,
+                 campo_24
+            from TBL_INPUT_MASSA_DADOS_10_20
+            where NRO_IDENTIF_GERA_MASSA = p_numero_geracao_massa 
+            and nro_linha_arquivo = p_nro_linha_arquivo;
+
+            l_retorno := campo_1||campo_2||campo_18||campo_19||campo_20||campo_21||campo_22||campo_23||campo_24||campo_5;
+
+            update tbl_input_massa_dados_10_20 a
+            set qtd_dias_liq_tran = campo_21,
+                cod_token_pan = campo_24
+            where nro_identif_gera_massa = p_numero_geracao_massa
+                        and nro_linha_arquivo = p_nro_linha_arquivo; 
        EXCEPTION
                 when others then
                 null;
@@ -177,24 +216,32 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
        END;
 
        PROCEDURE GERACAO_MASSA_10_20_TE (p_numero_geracao_massa varchar2) IS
-            l_dsc_linha_arquivo varchar2(400);
             l_numero_geracao_massa number;
             l_i number:=0;
 
             l_nome_arquivo varchar2(50);
             l_nro_parcela number;
        BEGIN
-            --for 
+            for rc in (select a.nro_identif_gera_massa,
+                              a.nro_linha_arquivo
+                      from tbl_input_massa_dados_10_20 a
+                      where a.nro_identif_gera_massa = p_numero_geracao_massa
+                      order by a.nro_linha_arquivo) loop
 
-            LAYOUT_SUBTIPO_00_TE1020 (p_numero_geracao_massa number,
-                               p_nro_linha_arquivo number,
-                               l_retorno varchar2);
+                LAYOUT_SUBTIPO_00_TE1020 (p_numero_geracao_massa,
+                               rc.nro_linha_arquivo,
+                               l_retorno);
 
-            LAYOUT_SUBTIPO_02_TE1020 (p_numero_geracao_massa number,
-                               p_nro_linha_arquivo number,
-                               l_retorno varchar2 );
+                insert into TBL_OUTPUT_MASSA_DADOS (NRO_IDENTIF_GERA_MASSA, NRO_LINHA_ARQUIVO, DSC_LINHA_ARQUIVO)
+                values (p_numero_geracao_massa,l_i,l_retorno);
+                l_i :=  l_i + 1;
 
-            commit;
+                LAYOUT_SUBTIPO_02_TE1020 (p_numero_geracao_massa,
+                               rc.nro_linha_arquivo,
+                               l_retorno);
+                l_i :=  l_i + 1;
+
+            end loop;
        exception
                 when others then
                 null;
@@ -389,4 +436,4 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
                 null;
        END;       
 
-END PKG_GERA_MASSA;
+END PKG_GERA_MASSA_10_20;
