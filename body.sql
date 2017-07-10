@@ -1,5 +1,17 @@
 CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
        
+       l_cod_bandeira varchar2(50);
+       l_cod_adquir varchar2(50); /* tb chamado de codigo credenciadora*/
+       l_cod_servico varchar2(10);
+       l_cod_tipo_plataforma varchar2(50);
+       l_cod_processadora varchar2(50);
+       l_tipo_arquivo varchar2(50);
+       l_valor_total_venda_debito number:=0;
+       l_qtde_total_transacoes_debito number:=0;
+       l_valor_total_venda_credito number:=0;
+       l_qtde_total_trans_credito number:=0;
+       l_nro_referencia varchar2(20);
+
        PROCEDURE INPUT_DADOS_10_20 ( 
                  p_numero_geracao_massa in out varchar2,
                  p_numero_linha_arquivo varchar2,   
@@ -111,8 +123,6 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
                  campo_16 char(4) := lpad('0',4,'0'); --Data de processamento (uso futuro) (163)
                  campo_17 char(2) := rpad(' ',2,' '); --Uso futuro
 
-                 l_cod_transacao := '';
-
        BEGIN
             campo_7 := to_char(sysdate-1,'YYYY') || lpad(to_char(sysdate-1,'MM'),2,'0') || lpad(to_char(sysdate-1,'DD'),2,'0');
             campo_16 := to_char(sysdate-1,'YYYY');
@@ -124,7 +134,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
                    rpad(nvl(nro_cartao,campo_8),19,' '),
                    lpad(nvl(vl_destino,campo_9),12,'0'),
                    lpad(nvl(vl_origem,campo_11),12,'0'),
-                   rpad(nvl(dsc_mensagem_texto,campo_13),70,' '),
+                   rpad(nvl(dsc_mensagem_texto,campo_13),70,' ')
             into campo_1,
                  campo_3,
                  campo_4,
@@ -132,7 +142,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
                  campo_8,
                  campo_9,
                  campo_11,
-                 campo_13,
+                 campo_13
             from TBL_INPUT_MASSA_DADOS_10_20
             where NRO_IDENTIF_GERA_MASSA = p_numero_geracao_massa 
             and nro_linha_arquivo = p_nro_linha_arquivo;
@@ -141,7 +151,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
                         campo_9||campo_10||campo_11||campo_12||campo_13||campo_14||campo_15||campo_16||campo_17;
 
             update tbl_input_massa_dados_10_20 a
-            set tipo_layout = l_cod_transacao,
+            set tipo_layout = campo_1,
                 cod_destino = campo_3,
                 cod_origem = campo_4,
                 cod_motivo_transacao = campo_5,
@@ -221,6 +231,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
 
             l_nome_arquivo varchar2(50);
             l_nro_parcela number;
+            l_retorno varchar2(4000);
        BEGIN
             for rc in (select a.nro_identif_gera_massa,
                               a.nro_linha_arquivo
@@ -228,7 +239,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
                       where a.nro_identif_gera_massa = p_numero_geracao_massa
                       order by a.nro_linha_arquivo) loop
 
-                LAYOUT_SUBTIPO_00_TE1020 (p_numero_geracao_massa,
+                LAYOUT_SUBTIPO_00_TE1020 (to_number(p_numero_geracao_massa),
                                rc.nro_linha_arquivo,
                                l_retorno);
 
@@ -236,7 +247,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
                 values (p_numero_geracao_massa,l_i,l_retorno);
                 l_i :=  l_i + 1;
 
-                LAYOUT_SUBTIPO_02_TE1020 (p_numero_geracao_massa,
+                LAYOUT_SUBTIPO_02_TE1020 (to_number(p_numero_geracao_massa),
                                rc.nro_linha_arquivo,
                                l_retorno);
                 l_i :=  l_i + 1;
@@ -264,6 +275,8 @@ CREATE OR REPLACE PACKAGE BODY PKG_GERA_MASSA_10_20 AS
                  campo_13 char(8) := lpad('25',8,'0'); --Codigo do adquirente (157)
                  campo_14 char(3) := lpad('007',3,'0'); --Codigo da bandeira (165)
                  campo_15 char(1) := lpad('0',1,'0'); --(Indicador de Rota do Arquivo (168)
+
+                 l_cod_bandeira char(3) := '';
        BEGIN
             --------------Tipo de Arquivo a ser gerado (ad -> band OU band -> ad)
             select case when max(DSC_TIPO_ARQUIVO) = 'ADQUIRENCIAPARABANDEIRA' then 1

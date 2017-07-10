@@ -15,9 +15,11 @@ CREATE OR REPLACE PACKAGE PKG_GERA_MASSA_10_20 AS
                  p_cod_origem varchar2,
                  p_cod_motivo_transacao varchar2,
                  p_nro_cartao varchar2,
+                 p_nro_referencia varchar2,
                  p_vl_destino varchar2,
                  p_vl_origem varchar2,
                  p_dsc_mensagem_texto varchar2,
+                 p_qtd_parcelas_transacao varchar2, 
                  p_qtd_dias_liq_tran varchar2,
                  p_dta_processamento varchar2,
                  p_cod_token_pan varchar2
